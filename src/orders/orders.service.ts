@@ -9,10 +9,11 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { PrismaClient } from '@prisma/client';
 import { UUID } from 'crypto';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
-import { OrderPaginationDto } from './dto';
 import { ChangeOrderStatusDto } from './dto/change-order-status.dto';
 import { NATS_SERVICE } from 'src/config/services';
 import { firstValueFrom } from 'rxjs';
+import { OrderWithProducts } from './interfaces/order-with-products.interface';
+import { OrderPaginationDto, PaidOrderDto } from './dto';
 
 @Injectable()
 export class OrdersService extends PrismaClient implements OnModuleInit {
@@ -61,9 +62,25 @@ export class OrdersService extends PrismaClient implements OnModuleInit {
             },
           },
         },
+        include: {
+          OrderItem: {
+            select: {
+              price: true,
+              quantity: true,
+              productId: true,
+            },
+          },
+        },
       });
 
-      return order;
+      return {
+        ...order,
+        OrderItem: order.OrderItem.map((orderItem) => ({
+          ...orderItem,
+          name: products.find((product) => product.id === orderItem.productId)
+            .name,
+        })),
+      };
     } catch (error) {
       throw new RpcException({
         status: HttpStatus.BAD_REQUEST,
@@ -157,5 +174,54 @@ export class OrdersService extends PrismaClient implements OnModuleInit {
       where: { id },
       data: { status: status },
     });
+  }
+
+  async createPaymentSession(order: OrderWithProducts) {
+    try {
+      const paymentSession = await firstValueFrom(
+        this.client.send(
+          { cmd: 'create.payment.session' },
+          {
+            orderId: order.id,
+            currency: 'usd',
+            items: order.OrderItem.map((item) => ({
+              name: item.name,
+              price: item.price,
+              quantity: item.quantity,
+            })),
+          },
+        ),
+      );
+
+      return paymentSession;
+    } catch (error) {
+      throw new RpcException({
+        status: HttpStatus.BAD_REQUEST,
+        message: 'Check logs: ' + error.message,
+      });
+    }
+  }
+
+  async markOrderAsPaid(paidOrderDto: PaidOrderDto) {
+    this.logger.log('Mark Order As Paid');
+    this.logger.log(paidOrderDto);
+
+    const order = await this.order.update({
+      where: { id: paidOrderDto.orderId },
+      data: {
+        status: 'PAID',
+        paid: true,
+        paidAt: new Date(),
+        stripeChargeId: paidOrderDto.stripePaymentId,
+
+        OrderReceipt: {
+          create: {
+            receiptUrl: paidOrderDto.receiptUrl,
+          },
+        },
+      },
+    });
+
+    return order;
   }
 }
