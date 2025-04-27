@@ -5,6 +5,8 @@
 
 /postgres
 
+/src/postgres
+
 # Logs
 logs
 *.log
