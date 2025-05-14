@@ -7,6 +7,7 @@ export class ChangeOrderStatusDto {
   @IsUUID(4)
   id: UUID;
 
+  // Test change
   @IsEnum(OrderStatusList, {
     message: `Valid status are ${OrderStatusList}`,
   })
