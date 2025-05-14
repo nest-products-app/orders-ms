@@ -1,15 +1,12 @@
 steps:
   - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
     args:
-      [
-        'build',
-        '-t',
-        'us-east1-docker.pkg.dev/ms-store-459001/ms-store-registry/orders-ms',
-        '-f',
-        'dockerfile.prod',
-        '--platform=linux/amd64',
-        '.',
-      ]
+      - -c
+      - |
+        docker build -t us-east1-docker.pkg.dev/ms-store-459001/ms-store-registry/orders-ms -f dockerfile.prod --platform=linux/amd64 --build-arg ORDERS_DATABASE_URL=$$DATABASE_URL .
+    secretEnv: ['DATABASE_URL']
+
   - name: 'gcr.io/cloud-builders/docker'
     args:
       [
@@ -17,5 +14,7 @@ steps:
         'us-east1-docker.pkg.dev/ms-store-459001/ms-store-registry/orders-ms',
       ]
 
-options:
-  logging: CLOUD_LOGGING_ONLY
+availableSecrets:
+  secretManager:
+    - versionName: projects/309296626666/secrets/orders_database_url/versions/1
+      env: 'DATABASE_URL'
