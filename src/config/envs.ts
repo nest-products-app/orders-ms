@@ -8,7 +8,7 @@ interface EnvVars {
   PRODUCTS_MICROSERVICE_PORT: number;
   NATS_SERVERS: string[];
 }
-
+// prueba
 const envsSchema = joi
   .object({
     PORT: joi.number().required(),
