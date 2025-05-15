@@ -14,6 +14,9 @@ steps:
         'us-east1-docker.pkg.dev/ms-store-459001/ms-store-registry/orders-ms',
       ]
 
+options:
+  logging: CLOUD_LOGGING_ONLY
+
 availableSecrets:
   secretManager:
     - versionName: projects/309296626666/secrets/orders_database_url/versions/1
