@@ -22,6 +22,7 @@ export class OrdersController {
     };
   }
 
+  // un gran comentario
   @MessagePattern({ cmd: 'find_all_orders' })
   findAll(@Payload() orderPaginationDto: OrderPaginationDto) {
     return this.ordersService.findAll(orderPaginationDto);
